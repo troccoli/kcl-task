@@ -2,12 +2,18 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\InputString;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class SubmitTest extends TestCase
 {
+    use RefreshDatabase;
+
     #[Test]
     public function a_field_called_text_is_required(): void
     {
@@ -46,5 +52,38 @@ class SubmitTest extends TestCase
         $this->postJson('/api/submit', ['text' => $inputValue])
             ->assertOk()
             ->assertJson(['message' => $numberOfCharacters]);
+    }
+
+    #[Test]
+    public function it_does_not_store_the_string_into_the_database_if_the_user_has_not_logged_in(): void
+    {
+        $numberOfCharacters = mt_rand(1, 100);
+        $inputValue = Str::random($numberOfCharacters);
+
+        $this->postJson('/api/submit', ['text' => $inputValue])
+            ->assertOk();
+
+        $this->assertDatabaseEmpty(InputString::class);
+    }
+
+    #[Test]
+    public function it_stores_the_string_in_the_db_when_user_is_logged_ind(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $numberOfCharacters = mt_rand(1, 100);
+        $inputValue = Str::random($numberOfCharacters);
+
+        $this->postJson('/api/submit', ['text' => $inputValue])
+            ->assertOk();
+
+        $this->assertDatabaseHas(
+            table: InputString::class,
+            data: [
+                'user_id' => $user->getKey(),
+                'string' => $inputValue,
+                'length' => $numberOfCharacters,
+            ]);
     }
 }

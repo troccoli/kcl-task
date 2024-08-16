@@ -22,4 +22,11 @@ class InputStringFactory extends Factory
             'user_id' => User::factory()
         ];
     }
+
+    public function withString(string $string): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'string' => $string
+        ]);
+    }
 }
